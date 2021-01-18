@@ -73,7 +73,19 @@ function useUser() {
   return context
 }
 
-// 🐨 add a function here called `updateUser`
+// adds a context module function
+// this way we expose async functions and guarantee the user of the consumer
+// will always do the dispatch in the right order
+// this is better than exposing a function from the context provider
+// where we would need to memoize the value so it works with useEffect
+function updateUser (dispatch, user, updates) {
+  dispatch({type: 'start update', updates})
+  // returning the promise in case the user wants to chain
+  return userClient.updateUser(user, updates).then(
+    updatedUser => dispatch({type: 'finish update', updatedUser}),
+    error => dispatch({type: 'fail update', error}),
+  )
+}
 // Then go down to the `handleSubmit` from `UserSettings` and put that logic in
 // this function. It should accept: dispatch, user, and updates
 
@@ -98,11 +110,7 @@ function UserSettings() {
   function handleSubmit(event) {
     event.preventDefault()
     // 🐨 move the following logic to the `updateUser` function you create above
-    userDispatch({type: 'start update', updates: formState})
-    userClient.updateUser(user, formState).then(
-      updatedUser => userDispatch({type: 'finish update', updatedUser}),
-      error => userDispatch({type: 'fail update', error}),
-    )
+    updateUser(userDispatch, user, formState)
   }
 
   return (

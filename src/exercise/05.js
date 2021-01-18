@@ -6,6 +6,7 @@ import {Switch} from '../switch'
 
 const callAll = (...fns) => (...args) => fns.forEach(fn => fn?.(...args))
 
+// default reducer for hook usage
 function toggleReducer(state, {type, initialState}) {
   switch (type) {
     case 'toggle': {
@@ -21,17 +22,15 @@ function toggleReducer(state, {type, initialState}) {
 }
 
 // 🐨 add a new option called `reducer` that defaults to `toggleReducer`
-function useToggle({initialOn = false} = {}) {
+function useToggle({reducer = toggleReducer, initialOn = false} = {}) {
   const {current: initialState} = React.useRef({on: initialOn})
-  // 🐨 instead of passing `toggleReducer` here, pass the `reducer` that's
-  // provided as an option
-  // ... and that's it! Don't forget to check the 💯 extra credit!
-  const [state, dispatch] = React.useReducer(toggleReducer, initialState)
+  const [state, dispatch] = React.useReducer(reducer, initialState)
   const {on} = state
 
   const toggle = () => dispatch({type: 'toggle'})
   const reset = () => dispatch({type: 'reset', initialState})
 
+  // props setters and getters pattern
   function getTogglerProps({onClick, ...props} = {}) {
     return {
       'aria-pressed': on,
@@ -60,7 +59,9 @@ function App() {
   const [timesClicked, setTimesClicked] = React.useState(0)
   const clickedTooMuch = timesClicked >= 4
 
-  function toggleStateReducer(state, action) {
+  // reducer provided by API user
+  // below we have a reducer very similar to our default reducer
+  /*function toggleStateReducer(state, action) {
     switch (action.type) {
       case 'toggle': {
         if (clickedTooMuch) {
@@ -75,10 +76,23 @@ function App() {
         throw new Error(`Unsupported type: ${action.type}`)
       }
     }
+  }*/
+
+  // in order to avoid repeating ourselves we can re use the default reducer by exporting
+  // reducer and hook on the same file, then importing and updating our custom reducer like this:
+  function toggleStateReducer(state, action) {
+    // rather than adding our own switch statement
+    // we can validate with an if that covers our specific need (not clicking after 4 clicks)
+    if (action.type === 'toggle' && clickedTooMuch) {
+      return { on: state.on}
+    }
+    // otherwise we can let the default reducer handle the other events and not having to re write
+    return toggleReducer(state, action)
   }
 
+
   const {on, getTogglerProps, getResetterProps} = useToggle({
-    reducer: toggleStateReducer,
+    reducer: toggleStateReducer, // developer can provide any reducer and overwrite the functionality of our hook
   })
 
   return (
